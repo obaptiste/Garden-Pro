@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Quote, GardenDesign } from "../types/schemas";
+import { Quote } from "../types/schemas";
 import { Loader2, ArrowLeft, Calendar, Mail, Phone, MapPin, CheckCircle2, Send, Trash2, FileDown, Clock, Tag } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { formatCurrency, cn } from "../lib/utils";
@@ -19,33 +19,12 @@ export const QuoteDetail: React.FC = () => {
   useEffect(() => {
     fetch(`/api/quotes/${id}`)
       .then(res => res.json())
-      .then(data => {
-        setQuote(data);
-        setIsLoading(false);
-      });
+      .then(data => setQuote(data))
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
   }, [id]);
 
-  const updateStatus = async (status: Quote["status"]) => {
-    const res = await fetch(`/api/quotes/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    const updated = await res.json();
-    setQuote(updated);
-  };
-
-  const selectDesign = async (index: number) => {
-    const res = await fetch(`/api/quotes/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ selectedDesign: index, status: "accepted" }),
-    });
-    const updated = await res.json();
-    setQuote(updated);
-  };
-
-  const handleSaveSchedule = async (updates: Partial<Quote>) => {
+  const patchQuote = async (updates: Partial<Quote>) => {
     const res = await fetch(`/api/quotes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -54,6 +33,10 @@ export const QuoteDetail: React.FC = () => {
     const updated = await res.json();
     setQuote(updated);
   };
+
+  const updateStatus = (status: Quote["status"]) => patchQuote({ status });
+
+  const selectDesign = (index: number) => patchQuote({ selectedDesign: index, status: "accepted" });
 
   if (isLoading) {
     return (
@@ -233,7 +216,7 @@ export const QuoteDetail: React.FC = () => {
                         onImageGenerated={(url) => {
                           const newUrls = [...(quote.birdsEyeImageUrls || [])];
                           newUrls[i] = url;
-                          handleSaveSchedule({ birdsEyeImageUrls: newUrls });
+                          patchQuote({ birdsEyeImageUrls: newUrls });
                         }}
                       />
                     </div>
@@ -257,7 +240,7 @@ export const QuoteDetail: React.FC = () => {
           {activeTab === "schedule" && (
             <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
               <h2 className="text-2xl font-black text-slate-900 mb-8">Project Schedule</h2>
-              <ScheduleEditor quote={quote} onSave={handleSaveSchedule} />
+              <ScheduleEditor quote={quote} onSave={patchQuote} />
             </div>
           )}
 
@@ -268,7 +251,7 @@ export const QuoteDetail: React.FC = () => {
                 className="w-full h-64 p-6 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all resize-none font-medium text-slate-700"
                 placeholder="Add private notes about site access, specific client requests, or material sourcing..."
                 defaultValue={quote.notes}
-                onBlur={(e) => handleSaveSchedule({ notes: e.target.value })}
+                onBlur={(e) => patchQuote({ notes: e.target.value })}
               />
             </div>
           )}

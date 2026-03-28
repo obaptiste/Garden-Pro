@@ -1,6 +1,6 @@
 import React from "react";
-import { Material, GardenDesign } from "../types/schemas";
-import { formatCurrency } from "../lib/utils";
+import { Material } from "../types/schemas";
+import { formatCurrency, parseCost } from "../lib/utils";
 import { Copy, FileText, Table as TableIcon } from "lucide-react";
 
 interface MaterialsTableProps {
@@ -8,17 +8,22 @@ interface MaterialsTableProps {
 }
 
 export const MaterialsTable: React.FC<MaterialsTableProps> = ({ materials }) => {
-  const categories = Array.from(new Set(materials.map((m) => m.category)));
-
-  const getSubtotal = (category: string) => {
-    return materials
-      .filter((m) => m.category === category)
-      .reduce((sum, m) => sum + parseFloat(m.estimatedTotalCost.replace(/[^0-9.]/g, "") || "0"), 0);
-  };
-
-  const grandTotal = materials.reduce(
-    (sum, m) => sum + parseFloat(m.estimatedTotalCost.replace(/[^0-9.]/g, "") || "0"),
-    0
+  const { categories, subtotals, grandTotal } = materials.reduce<{
+    categories: string[];
+    subtotals: Record<string, number>;
+    grandTotal: number;
+  }>(
+    (acc, m) => {
+      const cost = parseCost(m.estimatedTotalCost);
+      if (!acc.subtotals[m.category]) {
+        acc.categories.push(m.category);
+        acc.subtotals[m.category] = 0;
+      }
+      acc.subtotals[m.category] += cost;
+      acc.grandTotal += cost;
+      return acc;
+    },
+    { categories: [], subtotals: {}, grandTotal: 0 }
   );
 
   const copyAsCSV = () => {
@@ -39,13 +44,13 @@ export const MaterialsTable: React.FC<MaterialsTableProps> = ({ materials }) => 
   const copyAsText = () => {
     let text = "Materials & Equipment Breakdown\n\n";
     categories.forEach((cat) => {
-      text += `--- ${cat.replace("_", " ").toUpperCase()} ---\n`;
+      text += `--- ${cat.replaceAll("_", " ").toUpperCase()} ---\n`;
       materials
         .filter((m) => m.category === cat)
         .forEach((m) => {
           text += `${m.item}: ${m.quantity} @ ${m.estimatedUnitCost} = ${m.estimatedTotalCost}\n`;
         });
-      text += `Subtotal: ${formatCurrency(getSubtotal(cat))}\n\n`;
+      text += `Subtotal: ${formatCurrency(subtotals[cat])}\n\n`;
     });
     text += `GRAND TOTAL: ${formatCurrency(grandTotal)}`;
     navigator.clipboard.writeText(text);
@@ -89,7 +94,7 @@ export const MaterialsTable: React.FC<MaterialsTableProps> = ({ materials }) => 
               <React.Fragment key={cat}>
                 <tr className="bg-slate-100/50">
                   <td colSpan={5} className="px-4 py-1 font-bold text-slate-600 uppercase text-[10px]">
-                    {cat.replace("_", " ")}
+                    {cat.replaceAll("_", " ")}
                   </td>
                 </tr>
                 {materials
@@ -107,7 +112,7 @@ export const MaterialsTable: React.FC<MaterialsTableProps> = ({ materials }) => 
                   <td colSpan={3} className="px-4 py-2 text-right text-slate-500 italic">
                     Subtotal
                   </td>
-                  <td className="px-4 py-2 font-bold text-slate-800">{formatCurrency(getSubtotal(cat))}</td>
+                  <td className="px-4 py-2 font-bold text-slate-800">{formatCurrency(subtotals[cat])}</td>
                   <td></td>
                 </tr>
               </React.Fragment>

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Copy, Image as ImageIcon, Loader2, Wand2 } from "lucide-react";
-import { motion } from "motion/react";
 
 interface BirdsEyeViewProps {
   prompt: string;

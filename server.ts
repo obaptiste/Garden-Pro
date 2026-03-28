@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { storage } from "./src/lib/storage";
+import { QuoteSchema } from "./src/types/schemas";
 import { analyzeGarden, generateBirdsEyeImage } from "./src/services/geminiService";
 import { getSatelliteImage } from "./src/services/mapsService";
 import { v4 as uuidv4 } from "uuid";
@@ -65,7 +66,7 @@ async function startServer() {
         tags: tags || [],
       };
 
-      await storage.saveQuote(quote as any);
+      await storage.saveQuote(QuoteSchema.parse(quote));
       res.status(201).json(quote);
     } catch (error) {
       console.error(error);
