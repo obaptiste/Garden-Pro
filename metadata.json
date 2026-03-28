@@ -1,0 +1,8 @@
+{
+  "name": "Garden Concepts Pro",
+  "description": "Professional garden design quoting and management dashboard for landscaping contractors.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
