@@ -18,9 +18,12 @@ export const QuoteDetail: React.FC = () => {
 
   useEffect(() => {
     fetch(`/api/quotes/${id}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`Failed to load quote (${res.status})`);
+        return res.json();
+      })
       .then(data => setQuote(data))
-      .catch(() => {})
+      .catch((err) => console.error(err))
       .finally(() => setIsLoading(false));
   }, [id]);
 

@@ -6,7 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function parseCost(amount: string | number): number {
-  return typeof amount === "string" ? parseFloat(amount.replace(/[^0-9.]/g, "")) || 0 : amount;
+  if (typeof amount === "string") {
+    return parseFloat(amount.replace(/[^0-9.]/g, "")) || 0;
+  }
+  return isFinite(amount) ? amount : 0;
 }
 
 export function formatCurrency(amount: string | number) {

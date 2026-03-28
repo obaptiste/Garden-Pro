@@ -66,8 +66,12 @@ async function startServer() {
         tags: tags || [],
       };
 
-      await storage.saveQuote(QuoteSchema.parse(quote));
-      res.status(201).json(quote);
+      const parsed = QuoteSchema.safeParse(quote);
+      if (!parsed.success) {
+        return res.status(422).json({ error: "Invalid quote data", details: parsed.error.flatten() });
+      }
+      await storage.saveQuote(parsed.data);
+      res.status(201).json(parsed.data);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to create quote" });

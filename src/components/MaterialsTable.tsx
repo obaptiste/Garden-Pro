@@ -15,7 +15,7 @@ export const MaterialsTable: React.FC<MaterialsTableProps> = ({ materials }) => 
   }>(
     (acc, m) => {
       const cost = parseCost(m.estimatedTotalCost);
-      if (!acc.subtotals[m.category]) {
+      if (!Object.hasOwn(acc.subtotals, m.category)) {
         acc.categories.push(m.category);
         acc.subtotals[m.category] = 0;
       }
