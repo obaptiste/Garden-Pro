@@ -161,7 +161,7 @@ export const NewQuote: React.FC = () => {
                 type="text" 
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                 className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
                 placeholder="Add tag (e.g. Kent, Formal, Modern)"
               />

@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { storage } from "./src/lib/storage";
+import { QuoteSchema } from "./src/types/schemas";
 import { analyzeGarden, generateBirdsEyeImage } from "./src/services/geminiService";
 import { getSatelliteImage } from "./src/services/mapsService";
 import { v4 as uuidv4 } from "uuid";
@@ -65,8 +66,12 @@ async function startServer() {
         tags: tags || [],
       };
 
-      await storage.saveQuote(quote as any);
-      res.status(201).json(quote);
+      const parsed = QuoteSchema.safeParse(quote);
+      if (!parsed.success) {
+        return res.status(422).json({ error: "Invalid quote data", details: parsed.error.flatten() });
+      }
+      await storage.saveQuote(parsed.data);
+      res.status(201).json(parsed.data);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to create quote" });

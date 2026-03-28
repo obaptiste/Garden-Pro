@@ -2,7 +2,7 @@ import React from "react";
 import { isValid } from "date-fns";
 import { Quote } from "../types/schemas";
 import { TrendingUp, CheckCircle, Clock, BarChart3 } from "lucide-react";
-import { formatCurrency } from "../lib/utils";
+import { formatCurrency, parseCost } from "../lib/utils";
 
 interface StatsStripProps {
   quotes: Quote[];
@@ -10,26 +10,30 @@ interface StatsStripProps {
 
 export const StatsStrip: React.FC<StatsStripProps> = ({ quotes }) => {
   const now = new Date();
-  const thisMonth = quotes.filter(q => {
-    const d = new Date(q.createdAt);
-    if (!isValid(d)) return false;
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
+  let thisMonthCount = 0;
+  let acceptedCount = 0;
+  let pendingCount = 0;
+  let pipelineValue = 0;
 
-  const accepted = quotes.filter(q => q.status === 'accepted' || q.status === 'scheduled');
-  const pending = quotes.filter(q => q.status === 'sent' || q.status === 'draft');
-  
-  const pipelineValue = accepted.reduce((sum, q) => {
-    const cost = q.selectedDesign !== null 
-      ? parseFloat(q.designs[q.selectedDesign].estimatedCost.replace(/[^0-9.]/g, "")) 
-      : 0;
-    return sum + cost;
-  }, 0);
+  for (const q of quotes) {
+    const d = new Date(q.createdAt);
+    if (isValid(d) && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+      thisMonthCount++;
+    }
+    if (q.status === "accepted" || q.status === "scheduled") {
+      acceptedCount++;
+      if (q.selectedDesign !== null) {
+        pipelineValue += parseCost(q.designs[q.selectedDesign].estimatedCost);
+      }
+    } else if (q.status === "sent" || q.status === "draft") {
+      pendingCount++;
+    }
+  }
 
   const stats = [
-    { label: "Quotes This Month", value: thisMonth.length, icon: BarChart3, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Quotes Accepted", value: accepted.length, icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Quotes Pending", value: pending.length, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Quotes This Month", value: thisMonthCount, icon: BarChart3, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Quotes Accepted", value: acceptedCount, icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: "Quotes Pending", value: pendingCount, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Pipeline Value", value: formatCurrency(pipelineValue), icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50" },
   ];
 

@@ -5,10 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function parseCost(amount: string | number): number {
+  if (typeof amount === "string") {
+    return parseFloat(amount.replace(/[^0-9.]/g, "")) || 0;
+  }
+  return isFinite(amount) ? amount : 0;
+}
+
 export function formatCurrency(amount: string | number) {
-  const num = typeof amount === "string" ? parseFloat(amount.replace(/[^0-9.]/g, "")) : amount;
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "GBP",
-  }).format(num || 0);
+  }).format(parseCost(amount));
 }
