@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Upload, MapPin, Loader2, Sparkles, Plus, X } from "lucide-react";
+import { Upload, MapPin, Loader2, Sparkles, Plus, X, Camera, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export const NewQuote: React.FC = () => {
@@ -8,6 +8,7 @@ export const NewQuote: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     clientName: "",
     propertyAddress: "",
@@ -22,20 +23,26 @@ export const NewQuote: React.FC = () => {
     if (!files) return;
 
     setIsUploading(true);
+    setError(null);
     const newPhotos: string[] = [];
 
-    for (const file of Array.from(files)) {
-      const reader = new FileReader();
-      const promise = new Promise<string>((resolve) => {
-        reader.onloadend = () => resolve(reader.result as string);
-      });
-      reader.readAsDataURL(file);
-      const result = await promise;
-      newPhotos.push(result);
+    try {
+      for (const file of Array.from(files)) {
+        const reader = new FileReader();
+        const promise = new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        const result = await promise;
+        newPhotos.push(result);
+      }
+      setPhotos(prev => [...prev, ...newPhotos]);
+    } catch (e) {
+      setError("Failed to upload photo. Please try again.");
+    } finally {
+      setIsUploading(false);
     }
-
-    setPhotos(prev => [...prev, ...newPhotos]);
-    setIsUploading(false);
   };
 
   const removePhoto = (index: number) => {
@@ -56,6 +63,7 @@ export const NewQuote: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsGenerating(true);
+    setError(null);
 
     try {
       const res = await fetch("/api/quotes", {
@@ -63,10 +71,15 @@ export const NewQuote: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formData, photos }),
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to create quote.");
+      }
       const data = await res.json();
       navigate(`/dashboard/quotes/${data.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating quote:", error);
+      setError(error.message || "An unexpected error occurred.");
     } finally {
       setIsGenerating(false);
     }
@@ -127,6 +140,11 @@ export const NewQuote: React.FC = () => {
 
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Garden Photos</label>
+            {error && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl text-sm font-medium">
+                <AlertCircle size={18} /> {error}
+              </div>
+            )}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <AnimatePresence>
                 {photos.map((photo, i) => (
@@ -157,10 +175,24 @@ export const NewQuote: React.FC = () => {
                 ) : (
                   <>
                     <Upload className="text-slate-300 group-hover:text-emerald-500 transition-colors" size={32} />
-                    <span className="text-[10px] font-bold text-slate-400 mt-2">Upload Photo</span>
+                    <span className="text-[10px] font-bold text-slate-400 mt-2">Upload</span>
                   </>
                 )}
                 <input type="file" multiple accept="image/*" onChange={handlePhotoUpload} className="hidden" disabled={isUploading} />
+              </label>
+              <label className="aspect-square rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-all group relative">
+                {isUploading ? (
+                  <>
+                    <Loader2 className="animate-spin text-emerald-500" size={32} />
+                    <span className="text-[10px] font-bold text-slate-400 mt-2">Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="text-slate-300 group-hover:text-emerald-500 transition-colors" size={32} />
+                    <span className="text-[10px] font-bold text-slate-400 mt-2">Camera</span>
+                  </>
+                )}
+                <input type="file" accept="image/*" capture="environment" onChange={handlePhotoUpload} className="hidden" disabled={isUploading} />
               </label>
             </div>
           </div>
