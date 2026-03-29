@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Quote } from "../types/schemas";
+import { Quote, GardenDesign } from "../types/schemas";
 import { Loader2, ArrowLeft, Calendar, Mail, Phone, MapPin, CheckCircle2, Send, Trash2, FileDown, Clock, Tag } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { formatCurrency, cn } from "../lib/utils";
 import { MaterialsTable } from "../components/MaterialsTable";
 import { BirdsEyeView } from "../components/BirdsEyeView";
+import { MockupGallery } from "../components/MockupGallery";
 import { ScheduleEditor } from "../components/ScheduleEditor";
 import ReactMarkdown from "react-markdown";
 
@@ -18,16 +19,34 @@ export const QuoteDetail: React.FC = () => {
 
   useEffect(() => {
     fetch(`/api/quotes/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`Failed to load quote (${res.status})`);
-        return res.json();
-      })
-      .then(data => setQuote(data))
-      .catch((err) => console.error(err))
-      .finally(() => setIsLoading(false));
+      .then(res => res.json())
+      .then(data => {
+        setQuote(data);
+        setIsLoading(false);
+      });
   }, [id]);
 
-  const patchQuote = async (updates: Partial<Quote>) => {
+  const updateStatus = async (status: Quote["status"]) => {
+    const res = await fetch(`/api/quotes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    const updated = await res.json();
+    setQuote(updated);
+  };
+
+  const selectDesign = async (index: number) => {
+    const res = await fetch(`/api/quotes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ selectedDesign: index, status: "accepted" }),
+    });
+    const updated = await res.json();
+    setQuote(updated);
+  };
+
+  const handleSaveSchedule = async (updates: Partial<Quote>) => {
     const res = await fetch(`/api/quotes/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -36,10 +55,6 @@ export const QuoteDetail: React.FC = () => {
     const updated = await res.json();
     setQuote(updated);
   };
-
-  const updateStatus = (status: Quote["status"]) => patchQuote({ status });
-
-  const selectDesign = (index: number) => patchQuote({ selectedDesign: index, status: "accepted" });
 
   if (isLoading) {
     return (
@@ -136,7 +151,7 @@ export const QuoteDetail: React.FC = () => {
               <Tag size={18} className="text-emerald-600" /> Tags
             </h3>
             <div className="flex flex-wrap gap-2">
-              {quote.tags.map((tag, i) => (
+              {quote.tags?.map((tag, i) => (
                 <span key={i} className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-100">
                   {tag}
                 </span>
@@ -182,7 +197,7 @@ export const QuoteDetail: React.FC = () => {
 
           {activeTab === "designs" && (
             <div className="space-y-12">
-              {quote.designs.map((design, i) => (
+              {quote.designs?.map((design, i) => (
                 <div key={i} className={cn(
                   "bg-white rounded-3xl border-2 p-8 transition-all relative",
                   quote.selectedDesign === i ? "border-emerald-500 shadow-xl shadow-emerald-50" : "border-slate-100"
@@ -200,7 +215,7 @@ export const QuoteDetail: React.FC = () => {
                         <ReactMarkdown>{design.description}</ReactMarkdown>
                       </div>
                       <div className="space-y-2 mb-8">
-                        {design.keyFeatures.map((f, j) => (
+                        {design.keyFeatures?.map((f, j) => (
                           <div key={j} className="flex items-start gap-2 text-sm text-slate-600">
                             <div className="mt-1 text-emerald-500"><CheckCircle2 size={14} /></div>
                             {f}
@@ -219,10 +234,22 @@ export const QuoteDetail: React.FC = () => {
                         onImageGenerated={(url) => {
                           const newUrls = [...(quote.birdsEyeImageUrls || [])];
                           newUrls[i] = url;
-                          patchQuote({ birdsEyeImageUrls: newUrls });
+                          handleSaveSchedule({ birdsEyeImageUrls: newUrls });
                         }}
                       />
                     </div>
+                  </div>
+
+                  <div className="mb-12">
+                    <MockupGallery 
+                      prompts={design.mockupPrompts || []} 
+                      initialImageUrls={design.mockupImageUrls}
+                      onImagesGenerated={(urls) => {
+                        const newDesigns = [...quote.designs];
+                        newDesigns[i] = { ...newDesigns[i], mockupImageUrls: urls };
+                        handleSaveSchedule({ designs: newDesigns as any });
+                      }}
+                    />
                   </div>
 
                   <MaterialsTable materials={design.materials} />
@@ -243,7 +270,7 @@ export const QuoteDetail: React.FC = () => {
           {activeTab === "schedule" && (
             <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
               <h2 className="text-2xl font-black text-slate-900 mb-8">Project Schedule</h2>
-              <ScheduleEditor quote={quote} onSave={patchQuote} />
+              <ScheduleEditor quote={quote} onSave={handleSaveSchedule} />
             </div>
           )}
 
@@ -254,7 +281,7 @@ export const QuoteDetail: React.FC = () => {
                 className="w-full h-64 p-6 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all resize-none font-medium text-slate-700"
                 placeholder="Add private notes about site access, specific client requests, or material sourcing..."
                 defaultValue={quote.notes}
-                onBlur={(e) => patchQuote({ notes: e.target.value })}
+                onBlur={(e) => handleSaveSchedule({ notes: e.target.value })}
               />
             </div>
           )}

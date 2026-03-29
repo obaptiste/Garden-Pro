@@ -9,10 +9,10 @@ interface CalendarViewProps {
   onQuoteClick: (id: string) => void;
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ quotes, onQuoteClick }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({ quotes = [], onQuoteClick }) => {
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
 
-  const scheduledQuotes = quotes.filter(q => q.schedule?.scheduledStartDate);
+  const scheduledQuotes = (quotes || []).filter(q => q.schedule?.scheduledStartDate);
 
   const renderHeader = () => {
     return (

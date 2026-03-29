@@ -75,21 +75,25 @@ const SchedulePage = () => {
   );
 };
 
+import { ApiKeyGuard } from "./components/ApiKeyGuard";
+
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-slate-50">
-        <Sidebar />
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/quotes/:id" element={<QuoteDetail />} />
-            <Route path="/dashboard/schedule" element={<SchedulePage />} />
-            <Route path="/new-quote" element={<NewQuote />} />
-          </Routes>
-        </main>
-      </div>
+      <ApiKeyGuard>
+        <div className="flex min-h-screen bg-slate-50">
+          <Sidebar />
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/quotes/:id" element={<QuoteDetail />} />
+              <Route path="/dashboard/schedule" element={<SchedulePage />} />
+              <Route path="/new-quote" element={<NewQuote />} />
+            </Routes>
+          </main>
+        </div>
+      </ApiKeyGuard>
     </BrowserRouter>
   );
 }

@@ -16,15 +16,23 @@ export const Dashboard: React.FC = () => {
     fetch("/api/quotes")
       .then(res => res.json())
       .then(data => {
-        setQuotes(data);
+        if (Array.isArray(data)) {
+          setQuotes(data);
+        } else {
+          setQuotes([]);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setQuotes([]);
         setIsLoading(false);
       });
   }, []);
 
-  const filteredQuotes = quotes.filter(q => 
-    q.clientName.toLowerCase().includes(search.toLowerCase()) ||
-    q.propertyAddress.toLowerCase().includes(search.toLowerCase()) ||
-    q.postcode.toLowerCase().includes(search.toLowerCase())
+  const filteredQuotes = (quotes || []).filter(q => 
+    q.clientName?.toLowerCase().includes(search.toLowerCase()) ||
+    q.propertyAddress?.toLowerCase().includes(search.toLowerCase()) ||
+    q.postcode?.toLowerCase().includes(search.toLowerCase())
   );
 
   if (isLoading) {

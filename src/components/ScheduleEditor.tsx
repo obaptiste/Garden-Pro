@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Quote, Phase } from "../types/schemas";
 import { Calendar, Clock, Plus, Trash2, Users } from "lucide-react";
-import { format, addDays, differenceInDays, isValid } from "date-fns";
+import { format, addDays, differenceInDays, isValid, isBefore, isAfter, parseISO } from "date-fns";
+import { cn } from "../lib/utils";
 
 interface ScheduleEditorProps {
   quote: Quote;
@@ -13,6 +14,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ quote, onSave })
   const [endDate, setEndDate] = useState(quote.schedule?.scheduledEndDate || "");
   const [assignedTo, setAssignedTo] = useState(quote.schedule?.assignedTo?.join(", ") || "");
   const [phases, setPhases] = useState<Phase[]>(quote.schedule?.phases || []);
+  const [error, setError] = useState<string | null>(null);
 
   const duration = startDate && endDate && isValid(new Date(startDate)) && isValid(new Date(endDate)) 
     ? differenceInDays(new Date(endDate), new Date(startDate)) + 1 
@@ -39,6 +41,41 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ quote, onSave })
   };
 
   const handleSave = () => {
+    setError(null);
+
+    if (!startDate || !endDate) {
+      setError("Please set both start and end dates for the overall schedule.");
+      return;
+    }
+
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+
+    if (isBefore(end, start)) {
+      setError("The overall end date cannot be before the start date.");
+      return;
+    }
+
+    for (const phase of phases) {
+      const pStart = parseISO(phase.startDate);
+      const pEnd = parseISO(phase.endDate);
+
+      if (isBefore(pEnd, pStart)) {
+        setError(`Phase "${phase.phaseName}" has an end date before its start date.`);
+        return;
+      }
+
+      if (isBefore(pStart, start) || isAfter(pStart, end)) {
+        setError(`Phase "${phase.phaseName}" start date must be within the overall schedule (${startDate} to ${endDate}).`);
+        return;
+      }
+
+      if (isBefore(pEnd, start) || isAfter(pEnd, end)) {
+        setError(`Phase "${phase.phaseName}" end date must be within the overall schedule (${startDate} to ${endDate}).`);
+        return;
+      }
+    }
+
     onSave({
       schedule: {
         scheduledStartDate: startDate,
@@ -62,8 +99,14 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ quote, onSave })
           <input
             type="date"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              setError(null);
+            }}
+            className={cn(
+              "w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all",
+              startDate && endDate && isBefore(parseISO(endDate), parseISO(startDate)) && "border-red-300 bg-red-50"
+            )}
           />
         </div>
         <div className="space-y-2">
@@ -73,8 +116,14 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ quote, onSave })
           <input
             type="date"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+            onChange={(e) => {
+              setEndDate(e.target.value);
+              setError(null);
+            }}
+            className={cn(
+              "w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all",
+              startDate && endDate && isBefore(parseISO(endDate), parseISO(startDate)) && "border-red-300 bg-red-50"
+            )}
           />
         </div>
         <div className="space-y-2">
@@ -128,8 +177,14 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ quote, onSave })
                 <input
                   type="date"
                   value={phase.startDate}
-                  onChange={(e) => updatePhase(i, { startDate: e.target.value })}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                  onChange={(e) => {
+                    updatePhase(i, { startDate: e.target.value });
+                    setError(null);
+                  }}
+                  className={cn(
+                    "w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm",
+                    startDate && endDate && (isBefore(parseISO(phase.startDate), parseISO(startDate)) || isAfter(parseISO(phase.startDate), parseISO(endDate))) && "border-red-300 bg-red-50"
+                  )}
                 />
               </div>
               <div className="space-y-1">
@@ -137,8 +192,15 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ quote, onSave })
                 <input
                   type="date"
                   value={phase.endDate}
-                  onChange={(e) => updatePhase(i, { endDate: e.target.value })}
-                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                  onChange={(e) => {
+                    updatePhase(i, { endDate: e.target.value });
+                    setError(null);
+                  }}
+                  className={cn(
+                    "w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm",
+                    (isBefore(parseISO(phase.endDate), parseISO(phase.startDate)) || 
+                     (startDate && endDate && (isBefore(parseISO(phase.endDate), parseISO(startDate)) || isAfter(parseISO(phase.endDate), parseISO(endDate))))) && "border-red-300 bg-red-50"
+                  )}
                 />
               </div>
               <div className="space-y-1">
@@ -164,7 +226,12 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({ quote, onSave })
         </div>
       </div>
 
-      <div className="flex justify-end pt-4">
+      <div className="flex flex-col items-end gap-4 pt-4">
+        {error && (
+          <div className="text-red-500 text-sm font-bold bg-red-50 px-4 py-2 rounded-lg border border-red-100">
+            {error}
+          </div>
+        )}
         <button
           onClick={handleSave}
           className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition-all"

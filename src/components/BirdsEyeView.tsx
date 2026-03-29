@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Copy, Image as ImageIcon, Loader2, Wand2 } from "lucide-react";
+import { motion } from "motion/react";
 
 interface BirdsEyeViewProps {
   prompt: string;
@@ -10,6 +11,7 @@ interface BirdsEyeViewProps {
 export const BirdsEyeView: React.FC<BirdsEyeViewProps> = ({ prompt, initialImageUrl, onImageGenerated }) => {
   const [imageUrl, setImageUrl] = useState<string | undefined>(initialImageUrl);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [size, setSize] = useState<"1K" | "2K" | "4K">("1K");
 
   const generateImage = async () => {
     setIsGenerating(true);
@@ -17,7 +19,7 @@ export const BirdsEyeView: React.FC<BirdsEyeViewProps> = ({ prompt, initialImage
       const res = await fetch("/api/generate-illustration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, size }),
       });
       const data = await res.json();
       if (data.imageUrl) {
@@ -55,13 +57,24 @@ export const BirdsEyeView: React.FC<BirdsEyeViewProps> = ({ prompt, initialImage
         )}
 
         {!isGenerating && (
-          <button
-            onClick={generateImage}
-            className="absolute bottom-4 right-4 bg-emerald-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2 text-sm font-medium opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0"
-          >
-            <Wand2 size={16} />
-            {imageUrl ? "Regenerate" : "Generate Illustration"}
-          </button>
+          <div className="absolute bottom-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all">
+            <select 
+              value={size}
+              onChange={(e) => setSize(e.target.value as any)}
+              className="bg-white/90 backdrop-blur-sm text-[10px] font-bold text-slate-700 px-2 py-2 rounded-lg border border-slate-200 outline-none"
+            >
+              <option value="1K">1K</option>
+              <option value="2K">2K</option>
+              <option value="4K">4K</option>
+            </select>
+            <button
+              onClick={generateImage}
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2 text-sm font-medium"
+            >
+              <Wand2 size={16} />
+              {imageUrl ? "Regenerate" : "Generate Illustration"}
+            </button>
+          </div>
         )}
       </div>
 

@@ -1,9 +1,9 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { storage } from "./src/lib/storage";
-import { QuoteSchema } from "./src/types/schemas";
-import { analyzeGarden, generateBirdsEyeImage } from "./src/services/geminiService";
+import { analyzeGarden, generateAIImage } from "./src/services/geminiService";
 import { getSatelliteImage } from "./src/services/mapsService";
 import { v4 as uuidv4 } from "uuid";
 
@@ -43,9 +43,6 @@ async function startServer() {
       // 2. Analyze with Gemini
       const designs = await analyzeGarden(photos, satelliteImage, `${propertyAddress}, ${postcode}`);
       
-      // 3. Generate initial birds-eye images (optional, could be done on demand)
-      // For now, we'll just store the prompts and generate one if requested.
-
       const quote = {
         id: uuidv4(),
         clientName,
@@ -66,12 +63,8 @@ async function startServer() {
         tags: tags || [],
       };
 
-      const parsed = QuoteSchema.safeParse(quote);
-      if (!parsed.success) {
-        return res.status(422).json({ error: "Invalid quote data", details: parsed.error.flatten() });
-      }
-      await storage.saveQuote(parsed.data);
-      res.status(201).json(parsed.data);
+      await storage.saveQuote(quote as any);
+      res.status(201).json(quote);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to create quote" });
@@ -98,8 +91,8 @@ async function startServer() {
 
   app.post("/api/generate-illustration", async (req, res) => {
     try {
-      const { prompt } = req.body;
-      const imageUrl = await generateBirdsEyeImage(prompt);
+      const { prompt, size } = req.body;
+      const imageUrl = await generateAIImage(prompt, size);
       res.json({ imageUrl });
     } catch (error) {
       res.status(500).json({ error: "Failed to generate illustration" });

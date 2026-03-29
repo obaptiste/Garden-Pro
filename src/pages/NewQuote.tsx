@@ -7,6 +7,7 @@ export const NewQuote: React.FC = () => {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
     clientName: "",
     propertyAddress: "",
@@ -16,17 +17,25 @@ export const NewQuote: React.FC = () => {
   });
   const [newTag, setNewTag] = useState("");
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach(file => {
+    setIsUploading(true);
+    const newPhotos: string[] = [];
+
+    for (const file of Array.from(files)) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotos(prev => [...prev, reader.result as string]);
-      };
+      const promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+      });
       reader.readAsDataURL(file);
-    });
+      const result = await promise;
+      newPhotos.push(result);
+    }
+
+    setPhotos(prev => [...prev, ...newPhotos]);
+    setIsUploading(false);
   };
 
   const removePhoto = (index: number) => {
@@ -139,10 +148,19 @@ export const NewQuote: React.FC = () => {
                   </motion.div>
                 ))}
               </AnimatePresence>
-              <label className="aspect-square rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-all group">
-                <Upload className="text-slate-300 group-hover:text-emerald-500 transition-colors" size={32} />
-                <span className="text-[10px] font-bold text-slate-400 mt-2">Upload Photo</span>
-                <input type="file" multiple accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+              <label className="aspect-square rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-all group relative">
+                {isUploading ? (
+                  <>
+                    <Loader2 className="animate-spin text-emerald-500" size={32} />
+                    <span className="text-[10px] font-bold text-slate-400 mt-2">Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="text-slate-300 group-hover:text-emerald-500 transition-colors" size={32} />
+                    <span className="text-[10px] font-bold text-slate-400 mt-2">Upload Photo</span>
+                  </>
+                )}
+                <input type="file" multiple accept="image/*" onChange={handlePhotoUpload} className="hidden" disabled={isUploading} />
               </label>
             </div>
           </div>
@@ -161,7 +179,7 @@ export const NewQuote: React.FC = () => {
                 type="text" 
                 value={newTag}
                 onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                 className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
                 placeholder="Add tag (e.g. Kent, Formal, Modern)"
               />

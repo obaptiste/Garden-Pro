@@ -41,6 +41,8 @@ export const GardenDesignSchema = z.object({
   estimatedCost: z.string(),
   materials: z.array(MaterialSchema).min(5),
   birdsEyePrompt: z.string(),
+  mockupPrompts: z.array(z.string()).optional(),
+  mockupImageUrls: z.array(z.string()).optional(),
 });
 
 export const QuoteSchema = z.object({

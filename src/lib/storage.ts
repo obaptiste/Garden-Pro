@@ -14,23 +14,21 @@ export interface IStorage {
 }
 
 export class FileStorage implements IStorage {
-  private readonly ready: Promise<void>;
-
-  constructor() {
-    this.ready = this.init();
-  }
-
-  private async init() {
-    await fs.mkdir(DATA_DIR, { recursive: true });
+  private async ensureDataDir() {
     try {
-      await fs.writeFile(QUOTES_FILE, JSON.stringify([]), { flag: "wx" });
-    } catch (e: any) {
-      if (e.code !== "EEXIST") throw e;
+      await fs.access(DATA_DIR);
+    } catch {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+    }
+    try {
+      await fs.access(QUOTES_FILE);
+    } catch {
+      await fs.writeFile(QUOTES_FILE, JSON.stringify([]));
     }
   }
 
   async getQuotes(): Promise<Quote[]> {
-    await this.ready;
+    await this.ensureDataDir();
     const data = await fs.readFile(QUOTES_FILE, "utf-8");
     return JSON.parse(data);
   }
